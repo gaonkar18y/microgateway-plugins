@@ -468,12 +468,14 @@ function sendError(req, res, next, logger, stats, code, message) {
         error: code,
         error_description: message
     };
-
+    const err = Error(message);
     debug('auth failure', res.statusCode, code, message ? message : '', req.headers, req.method, req.url);
     if ( logger && logger.error && (typeof logger.error === 'function') ) {
         logger.error({
             req: req,
-            res: res
+            res: res,
+            err: err,
+            component:'oauth'
         }, 'oauth');
     }
 
