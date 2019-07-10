@@ -339,7 +339,7 @@ function sendError(req, res, next, logger, stats, code, message) {
 
     debug("auth failure", res.statusCode, code, message ? message : "", req.headers, req.method, req.url);
     const err = Error('auth failure');
-    logger.error({ req: req, res: res, err:err, component:'apikeys' }, "apikeys");
+    logger.eventLog({level:'error', req: req, res: res, err:err, component:'apikeys' }, "apikeys");
 
     //opentracing
     if (process.env.EDGEMICRO_OPENTRACE) {

@@ -222,7 +222,7 @@ function sendError(req, res, next, logger, stats, code, message) {
     };
     let err = Error(message)
     debug('auth failure', res.statusCode, code, message ? message : '', req.headers, req.method, req.url);
-    logger.error({ req: req, res: res, err:err, component:'extauth' }, 'extauth');
+    logger.eventLog({level:'error', req: req, res: res, err:err, component:'extauth' }, 'extauth');
 
     //opentracing
     if (process.env.EDGEMICRO_OPENTRACE) {

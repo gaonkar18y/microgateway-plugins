@@ -471,7 +471,8 @@ function sendError(req, res, next, logger, stats, code, message) {
     const err = Error(message);
     debug('auth failure', res.statusCode, code, message ? message : '', req.headers, req.method, req.url);
     if ( logger && logger.error && (typeof logger.error === 'function') ) {
-        logger.error({
+        logger.eventLog({
+            level:'error',
             req: req,
             res: res,
             err: err,
