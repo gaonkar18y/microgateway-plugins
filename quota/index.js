@@ -11,6 +11,9 @@ var url = require('url');
 
 
 module.exports.init = function(config /*, logger, stats */) {
+    if ( process && process.send ) {
+        process.send({isPluginLog:true, data: { message:'quota plugin init called, config from core',config:config}, pluginName:'quota'});
+    }
 
     const { product_to_proxy, proxies } = config;
     const prodsObj = {};
@@ -62,7 +65,12 @@ module.exports.init = function(config /*, logger, stats */) {
 
         prodObj.basePaths = basePaths;
         prodsObj[productName] = prodObj;
-
+        if ( process && process.send ) {
+        process.send({isPluginLog:true, data: {
+            message:'creating volos quota object for product: '+productName, config:config[productName],
+            prodsObj:prodsObj
+            }, pluginName:'quota'});
+        }
         config[productName].request = config.request;
         var quota = Quota.create(config[productName]);
         quotas[productName] = quota.connectMiddleware().apply(options);
@@ -84,6 +92,11 @@ module.exports.init = function(config /*, logger, stats */) {
         let proxyPath = res.proxy ? res.proxy.base_path : undefined;
         let proxyUrl = req.url ? url.parse(req.url).pathname : undefined;
         let matchedPathProxy = proxyPath || proxyUrl || '';
+        if ( process && process.send ) {
+            process.send({isPluginLog:true, data: { message:'New request arrived at quota plugin',
+            reqtoken:req.token, reqtokenapi_product_list:req.token.api_product_list, matchedPathProxy:matchedPathProxy },
+            pluginName:'quota'});
+        }
         debug('matchedPathProxy',matchedPathProxy);
 
         const prodList = [];
@@ -97,13 +110,19 @@ module.exports.init = function(config /*, logger, stats */) {
 
             debug('prodList', prodList);
         }
-
+        if ( process && process.send ) {
+            process.send({isPluginLog:true, data: { message:'list of products in which the proxy is present',
+            prodList:prodList}, pluginName:'quota'});
+        }
         // this is arbitrary, but not sure there's a better way?
         // async.eachSeries(req.token.api_product_list,
         async.eachSeries(prodList,
             function(productName, cb) {
                 var connectMiddleware = quotas[productName];
                 debug('applying quota for', productName);
+                if ( process && process.send ) {
+                    process.send({isPluginLog:true, data: { message:'applying quota for product:'+productName }, pluginName:'quota'});
+                }
                 if ( connectMiddleware ){  connectMiddleware(req, res, cb) } else cb();
             },
             function(err) {
