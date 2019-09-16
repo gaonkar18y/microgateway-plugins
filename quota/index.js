@@ -8,10 +8,19 @@ var async = require('async');
 var Quota = require('volos-quota-apigee');
 var debug = require('debug')('gateway:quota');
 var url = require('url');
+const util = require('util');
 
 
-module.exports.init = function(config /*, logger, stats */) {
+module.exports.init = function(config, logger /*, stats */) {
 
+    const debugImpl = (...data) => {
+        const formatedData = util.format(...data);
+        logger.debug('quota : '+formatedData);
+        debug(formatedData);
+    }
+
+    debugImpl('quota plugin init called with config: %j', config)
+    
     const { product_to_proxy, proxies } = config;
     const prodsObj = {};
     var quotas = {}; // productName -> connectMiddleware
@@ -25,7 +34,7 @@ module.exports.init = function(config /*, logger, stats */) {
 
     if (  (product_to_proxy === undefined)  || (proxies === undefined) ) {
         //
-        debug("quota plugin did not recieve valid produc-proxy map or list of proxies")
+        debugImpl("quota plugin did not recieve valid produc-proxy map or list of proxies")
         return(undefined)
     }
 
@@ -33,7 +42,7 @@ module.exports.init = function(config /*, logger, stats */) {
         var product = config[productName];
         if (!product.uri && !product.key && !product.secret && !product.allow && !product.interval || product.interval === "null") {
             // skip non-quota config
-            debug('Quota not configured on the API product, skipping. This message is safe to ignore');
+            debugImpl('Quota not configured on the API product: %s, skipping. This message is safe to ignore',productName);
             return;
         }
 
@@ -64,11 +73,12 @@ module.exports.init = function(config /*, logger, stats */) {
         prodsObj[productName] = prodObj;
 
         config[productName].request = config.request;
+        config[productName]['debug'] = debugImpl;
         var quota = Quota.create(config[productName]);
         quotas[productName] = quota.connectMiddleware().apply(options);
         //
         quotaManagers[productName] = quota;
-        debug('created quota for', productName);
+        debugImpl('created quota for', productName);
     });
 
     var middleware = function(req, res, next) {
@@ -77,14 +87,14 @@ module.exports.init = function(config /*, logger, stats */) {
             return next();
         }
 
-        debug('quota checking products', req.token.api_product_list);
+        debugImpl('New request, quota checking products', req.token.api_product_list);
 
         req.originalUrl = req.originalUrl || req.url; // emulate connect
         
         let proxyPath = res.proxy ? res.proxy.base_path : undefined;
         let proxyUrl = req.url ? url.parse(req.url).pathname : undefined;
         let matchedPathProxy = proxyPath || proxyUrl || '';
-        debug('matchedPathProxy',matchedPathProxy);
+        debugImpl('matchedPathProxy',matchedPathProxy);
 
         const prodList = [];
         if (Array.isArray(req.token.api_product_list)) {
@@ -95,7 +105,7 @@ module.exports.init = function(config /*, logger, stats */) {
                 return acc;
             }, prodList);
 
-            debug('prodList', prodList);
+            debugImpl('prodList', prodList);
         }
 
         // this is arbitrary, but not sure there's a better way?
@@ -103,7 +113,7 @@ module.exports.init = function(config /*, logger, stats */) {
         async.eachSeries(prodList,
             function(productName, cb) {
                 var connectMiddleware = quotas[productName];
-                debug('applying quota for', productName);
+                debugImpl('applying quota for', productName);
                 req['productName'] = productName; // to be used for quota identifier generation
                 if ( connectMiddleware ){  connectMiddleware(req, res, cb) } else cb();
             },
@@ -121,7 +131,7 @@ module.exports.init = function(config /*, logger, stats */) {
 
         onrequest: function(req, res, next) {
             if ( process.env.EDGEMICRO_LOCAL !== undefined ) {
-                debug("MG running in local mode. Skipping Quota");
+                debugImpl("MG running in local mode. Skipping Quota");
                 next();
             } else {
                 middleware(req, res, next);
