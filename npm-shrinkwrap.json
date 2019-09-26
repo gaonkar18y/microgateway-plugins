@@ -1,6 +1,6 @@
 {
   "name": "microgateway-plugins",
-  "version": "3.0.6",
+  "version": "3.0.8",
   "lockfileVersion": 1,
   "requires": true,
   "dependencies": {
@@ -2345,9 +2345,10 @@
       "integrity": "sha512-NqVDv9TpANUjFm0N8uM5GxL36UgKi9/atZw+x7YFnQ8ckwFGKrl4xX4yWtrey3UJm5nP1kUbnYgLopqWNSRhWw=="
     },
     "semver": {
-      "version": "3.0.1",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-3.0.1.tgz",
-      "integrity": "sha1-cgrAElFaJS+R+w3S6ZpWpw1s8Hg="
+      "version": "5.7.1",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.7.1.tgz",
+      "integrity": "sha512-sauaDf/PZdVgrLTNYHRtpXa1iRiKcaebiKQ1BJdpQlWH2lCvexQdX55snPFyK7QzpudqbCI0qXFfOasHdyNDGQ==",
+      "dev": true
     },
     "set-blocking": {
       "version": "2.0.0",
@@ -2917,9 +2918,9 @@
       }
     },
     "volos-quota-apigee": {
-      "version": "0.13.2",
-      "resolved": "https://registry.npmjs.org/volos-quota-apigee/-/volos-quota-apigee-0.13.2.tgz",
-      "integrity": "sha512-/CtkiAI4Uj0+oDkRbgRRbnkSjcJ3P2Wpqk/k+yIAVVCqwwKyY1SkHniN9n1r+4SQoV7XmpUcvhk/ZEfPamMOzQ==",
+      "version": "0.13.3",
+      "resolved": "https://registry.npmjs.org/volos-quota-apigee/-/volos-quota-apigee-0.13.3.tgz",
+      "integrity": "sha512-jgMbqfF7llGAkPN91SapKP2M5ropURhut5+ktccYZo/9Z48tVeGithXI5nka+k08zIlCbfIzWnA7agSt+4Vudg==",
       "requires": {
         "apigee-access": ">=1.2.x",
         "debug": "^2.2.0",
@@ -2940,6 +2941,11 @@
           "version": "2.0.0",
           "resolved": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz",
           "integrity": "sha1-VgiurfwAvmwpAd9fmGF4jeDVl8g="
+        },
+        "semver": {
+          "version": "3.0.1",
+          "resolved": "https://registry.npmjs.org/semver/-/semver-3.0.1.tgz",
+          "integrity": "sha1-cgrAElFaJS+R+w3S6ZpWpw1s8Hg="
         }
       }
     },

@@ -35,9 +35,13 @@ map.setup({
 
 var tokenCacheSize = 100;
 
+let oauthConfigObj = null;
+
 module.exports.init = function(config, logger, stats) {
 
     if ( config === undefined || !config ) return(undefined);
+
+    oauthConfigObj = config;
 
     var request = config.request ? requestLib.defaults(config.request) : requestLib;
     var keys = config.jwk_keys ? JSON.parse(config.jwk_keys) : null;
@@ -167,6 +171,14 @@ module.exports.init = function(config, logger, stats) {
                 'x-dna-api-key': apiKey
             }
         };
+        
+        if( config.key && config.secret) {
+            api_key_options['auth']= {
+              user: config.key,
+              pass: config.secret,
+              sendImmediately: true
+            }
+        }
 
         if (config.agentOptions) {
             if (config.agentOptions.requestCert) {
@@ -197,8 +209,8 @@ module.exports.init = function(config, logger, stats) {
                 return sendError(req, res, next, logger, stats, 'gateway_timeout', err.message);
             }
             if (response.statusCode !== 200) {
-                debug('verify apikey access_denied');
-                return sendError(req, res, next, logger, stats, 'access_denied', response.statusMessage);
+                debug('verify apikey failure',response.statusCode, response.statusMessage, body);
+                return sendError(req, res, next, logger, stats, 'access_denied', response.statusMessage,response);
             }
             verify(body, config, logger, stats, middleware, req, res, next, apiKey);
         });
@@ -462,9 +474,15 @@ function setResponseCode(res,code) {
     }
 }
 
-function sendError(req, res, next, logger, stats, code, message) {
+function sendError(req, res, next, logger, stats, code, message, upstreamResp) {
 
-    setResponseCode(res,code);
+    if ( upstreamResp && oauthConfigObj.hasOwnProperty('useUpstreamResponse') && oauthConfigObj.useUpstreamResponse === true ) {
+        res.statusCode = upstreamResp.statusCode;
+        res.statusMessage = upstreamResp.statusMessage;
+        code = 'upstream_error';
+    } else {
+        setResponseCode(res,code);
+    }
 
     var response = {
         error: code,

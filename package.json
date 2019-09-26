@@ -1,6 +1,6 @@
 {
   "name": "microgateway-plugins",
-  "version": "3.0.6",
+  "version": "3.0.8",
   "description": "Plugins for Apige Edge Microgateway",
   "license": "Apache-2.0",
   "main": "index.js",
@@ -27,7 +27,7 @@
     "toobusy-js": "^0.5.1",
     "volos-analytics-apigee": "^0.4.0",
     "volos-cache-memory": "^0.10.0",
-    "volos-quota-apigee": "^0.13.2",
+    "volos-quota-apigee": "^0.13.3",
     "volos-quota-common": "^0.11.7",
     "volos-quota-memory": "^0.11.0",
     "volos-spikearrest-memory": "^0.10.0",
