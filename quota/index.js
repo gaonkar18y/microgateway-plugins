@@ -9,6 +9,7 @@ var Quota = require('volos-quota-apigee');
 var debugTerminal = require('debug')('gateway:quota');
 var url = require('url');
 const util = require('util');
+const benchmarkLlogger = require('./benchmark_logger');
 
 
 module.exports.init = function(config, logger /*, stats */) {
@@ -17,6 +18,7 @@ module.exports.init = function(config, logger /*, stats */) {
         const formatedData = util.format(...data);
         logger.debug('quota : '+formatedData);
         debugTerminal(formatedData);
+        benchmarkLlogger.logBenchmark(formatedData);
     }
 
     debug('quota plugin init called with config: %j', config)
