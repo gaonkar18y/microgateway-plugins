@@ -3,19 +3,20 @@ const util = require('util');
 const os = require('os');
 const path = require('path');
 const cluster = require('cluster');
+var _ = require('underscore');
 
 
 const LOG_FILE_CEATE_INTERVAL = 1000 * 60 * 5 ; //  5 mins
 let quotaBenchmarkLogFile = '';
 let isInitDone = false;
-let outputDir = '/Users/yogeshgaonkar/EMG/Quota_testing/benchmark_logs/calendar_asynch/';
+let outputDir = '/Users/yogeshgaonkar/EMG/Quota_testing/benchmark_logs/test/';
 const logPrefixes = ['applying quota check:Bucket=','count=','expires=','allow=','isAllowed=','statusCode=','weight_sent=','remoteCount=','remoteExpiry=',
-'remote_exceeded=','"','"','remote_available=','debugMpId='];
+'remote_exceeded=','"','"','remote_available=','debugMpId=','remote_timestamp=','respTime='];
 
 let counter=0;
 const fileNamesSuffix = ['Quota60','Quota600','Quota3000','Quota6000'];
 
-const csv_header = "Timestamp,ProcessId,Bucket,Local+Remote,Bucket Expires,Allow,Success,Status Code,Weight Applied, Remote Count,Remote Expiry,Remote Exceeded,Remote Available,DebugMpId"+os.EOL;
+const csv_header = "Time,Timestamp,ProcessId,Bucket,Local+Remote,Bucket Expires,Allow,Success,Status Code,Weight Applied, Remote Count,Remote Expiry,Remote Exceeded,Remote Available,DebugMpId,Remote Timestamp,Apply Response Time"+os.EOL;
 
 const _calculateLogFilePath = () => {
     let suffix = fileNamesSuffix[counter] || (counter+1)
@@ -66,8 +67,9 @@ const writelogToFile = function(data) {
     } else if (cluster.isWorker) {
       ProcessId = cluster.worker.id;
     }
+    const Time = _.now();
     const Timestamp = new Date().toISOString();
-    const record = Timestamp+','+ProcessId+','+dataStr+os.EOL;
+    const record = Time+','+Timestamp+','+ProcessId+','+dataStr+os.EOL;
 
 
     if (!isInitDone) {
