@@ -21,6 +21,7 @@ var _ = require('lodash');
 const authHeaderRegex = /Bearer (.+)/;
 const PRIVATE_JWT_VALUES = ['application_name', 'client_id', 'api_product_list', 'iat', 'exp'];
 const SUPPORTED_SINGLE_FORWARD_SLASH_PATTERN = "/";
+const DOUBLE_STAR_PLACEHOLDER = "@@@@";
 
 const LOG_TAG_COMP = 'oauth';
 
@@ -391,7 +392,7 @@ module.exports.init = function(config, logger, stats) {
 // then check if that proxy is one of the authorized proxies in bootstrap
 const checkIfAuthorized = module.exports.checkIfAuthorized = function checkIfAuthorized(config, urlPath, proxy, decodedToken) {
 
-    var parsedUrl = url.parse(urlPath);
+    urlPath = url.parse(urlPath).pathname;
     debug('product only: ' + productOnly);
     if (!decodedToken.api_product_list) {
         debug('no api product list');
@@ -409,35 +410,27 @@ const checkIfAuthorized = module.exports.checkIfAuthorized = function checkIfAut
             }
         }
 
-        const apiproxies = config.product_to_api_resource[product];
+        const resourcePaths = config.product_to_api_resource[product];
         var matchesProxyRules = false;
-        if (apiproxies && apiproxies.length) {
-            apiproxies.forEach(function(tempApiProxy) {
-                if (matchesProxyRules) {
-                    //found one
-                    debug('found matching proxy rule');
-                    return;
+        if (resourcePaths && resourcePaths.length && !resourcePaths.includes(SUPPORTED_SINGLE_FORWARD_SLASH_PATTERN)) { // if resource paths contains / then allow all requests
+            matchesProxyRules = resourcePaths.some(function(productResourcePath) {
+                
+                let apiproxy = productResourcePath.includes(proxy.base_path) ?
+                    productResourcePath :
+                    proxy.base_path + (productResourcePath.startsWith("/") ? "" : "/") + productResourcePath
+                
+                if ( urlPath.endsWith("/") && !apiproxy.endsWith("/") && productResourcePath.lastIndexOf('/') === 0 ) { // if slash is not part of literals
+                    apiproxy = apiproxy + "/";
                 }
-                if ( tempApiProxy === SUPPORTED_SINGLE_FORWARD_SLASH_PATTERN ) {
-                    matchesProxyRules = true
-                } else {
 
-                urlPath = parsedUrl.pathname;
-                const apiproxy = tempApiProxy.includes(proxy.base_path) ?
-                    tempApiProxy :
-                    proxy.base_path + (tempApiProxy.startsWith("/") ? "" : "/") + tempApiProxy
-                if (apiproxy.endsWith("/") && !urlPath.endsWith("/")) {
-                    urlPath = urlPath + "/";
-                }
-                    const proxyRegEx = new RegExp(`^${proxy.base_path
-                        .replace(/\//g,'\\/')}${tempApiProxy
-                        .replace(/(\w+)\/\*\*/g,'$1/.*')
-                        .replace(/\/\*\*/g,'/\\w+.*')
-                        .replace( /\"/, '')
-                        .replace(/\//g,'\\/')
-                        .replace(/\/\*(.*?)(?=\/|$)/g,'\/\\w+\\/*') }$`, 'ig');                       
-                        matchesProxyRules = urlPath.match(proxyRegEx);
-                }
+                let placeholderStr = DOUBLE_STAR_PLACEHOLDER;
+                while ( apiproxy.indexOf(placeholderStr) !== -1) { placeholderStr += DOUBLE_STAR_PLACEHOLDER; }
+                
+                const proxyRegEx = new RegExp(`^${ apiproxy.replace(/\*\*/g, placeholderStr) // temp replace ** by placeholder because regx of ** contains *
+                .replace(/\*/g,'\\w+') // for single *, Replace all single stars with regex to allow single word only
+                .replace(new RegExp(placeholderStr,"g"), ".*") // for ** , string of 0 or more length
+                }$`, 'ig');
+                return urlPath.match(proxyRegEx);
             })
 
         } else {
