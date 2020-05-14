@@ -206,8 +206,8 @@ module.exports.init = function(config, logger, stats) {
 function getPEM(decodedToken, keys) {
     var i = 0;
     debug('jwk kid ' + decodedToken.headerObj.kid);
-    for (; i < keys.length; i++) {
-        if (keys.kid === decodedToken.headerObj.kid) {
+    for (; i < keys.keys.length; i++) {
+        if (keys.keys[i].kid === decodedToken.headerObj.kid) {
             break;
         }
     }
