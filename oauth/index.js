@@ -245,9 +245,13 @@ module.exports.init = function(config, logger, stats) {
             }
             if (err) {
                 debug('verify apikey gateway timeout');
+                let verify_api_key_resp = 'verifyApiKey call err='+err.message;
+                logger.eventLog({ level:'error', req: req, res: res, err: err,component:'oauth'}, verify_api_key_resp);
                 return sendError(req, res, next, logger, stats, 'gateway_timeout', err.message);
             }
             if (response.statusCode !== 200) {
+                let verify_api_key_resp = 'verifyApiKey call response statusCode:'+response.statusCode + ' statusMessage:' +response.statusMessage ;
+                logger.eventLog({ level:'error', req: req, res: res, err: err,component:'oauth'}, verify_api_key_resp);
                 debug('verify apikey failure',response.statusCode, response.statusMessage, body);
                 return sendError(req, res, next, logger, stats, 'access_denied', response.statusMessage,response);
             }

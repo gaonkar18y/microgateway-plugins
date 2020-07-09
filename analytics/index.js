@@ -63,6 +63,7 @@ module.exports.init = function(config, logger /*, stats */) {
         }
     };
 
+    config.logger = logger;
     var analytics = volos.create(config);
     var middleware = analytics.expressMiddleWare().apply();
 
