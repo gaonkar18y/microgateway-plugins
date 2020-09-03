@@ -10,9 +10,12 @@ var QuotaRedis = require('volos-quota-redis');
 var debugTerminal = require('debug')('gateway:quota');
 var url = require('url');
 const util = require('util');
+const redis = require("redis");
 
 
 module.exports.init = function(config, logger /*, stats */) {
+
+    let redisClient = null;
 
     const debug = (...data) => {
         const formatedData = util.format(...data);
@@ -94,11 +97,19 @@ module.exports.init = function(config, logger /*, stats */) {
         if (config[productName].useRedis === true ) {
             debug('using redis quota');
             Quota = QuotaRedis;
-            let options = { }
-            if ( config[productName]['redisPassword'] ) {
-                options['auth_pass'] = config[productName]['redisPassword'];
+            if ( !redisClient ) {
+                let options = { }
+                if ( config[productName]['redisPassword'] ) {
+                    options['auth_pass'] = config[productName]['redisPassword'];
+                }
+                const host = config[productName].host || '127.0.0.1';
+                const port = config[productName].port || 6379;
+                const db = options.db || 0;
+                debug('creating redis client');
+                redisClient = redis.createClient(port, host, options);
+                this.client.select(db);
             }
-            config[productName]['options'] = options;
+            config[productName]['client'] = redisClient;
         }
         
         prodObj.basePaths = basePaths;
