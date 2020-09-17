@@ -14,6 +14,8 @@ const util = require('util');
 
 module.exports.init = function(config, logger /*, stats */) {
 
+    let redisConnection = null;
+
     const debug = (...data) => {
         const formatedData = util.format(...data);
         logger.debug('quota : '+formatedData);
@@ -94,11 +96,18 @@ module.exports.init = function(config, logger /*, stats */) {
         if (config[productName].useRedis === true ) {
             debug('using redis quota');
             Quota = QuotaRedis;
-            let options = { }
-            if ( config[productName]['redisPassword'] ) {
-                options['auth_pass'] = config[productName]['redisPassword'];
+            if ( !redisConnection ) {
+                debug('creating redis client');
+                redisConnection = config.getRedisClient({
+                    redisHost: config[productName].host, redisPort: config[productName].port, 
+                    redisPassword: config[productName]['redisPassword'], retryEnabled: true
+                },(err) => {
+                    if (err) {
+                        debug('error im creating redis client',err);
+                    }
+                })
             }
-            config[productName]['options'] = options;
+            config[productName]['client'] = redisConnection.redisClient;
         }
         
         prodObj.basePaths = basePaths;
@@ -188,6 +197,9 @@ module.exports.init = function(config, logger /*, stats */) {
                     clearTimeout(q.customTimeoutRef);
                 }
                 
+            }
+            if (redisConnection) {
+                redisConnection.disconnect();
             }
         }
 
