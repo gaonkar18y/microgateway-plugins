@@ -7,32 +7,13 @@ var debug = require('debug')('plugin:accesscontrol');
 var util = require("util");
 const dns = require('dns');
 
-module.exports.init = function (config /*, logger, stats */) {
+module.exports.init = function (config , logger, stats ) {
 
-	var allow;
-	var deny;
+	if (config === null) debug('WARNING: insufficient information to run accesscontrol');
+	else if (config.allow === null && config.deny === null) debug('WARNING: insufficient information to run accesscontrol');
 
-	/**
-	* This method reads allow and/or deby lists from the config.yaml
-	* applies the appropriate rule on the incoming message
-	*/
-	function checkAccessControlInfo(sourceIP) {
-		if (config === null) debug('WARNING: insufficient information to run accesscontrol');
-		else if (config.allow === null && config.deny === null) debug('WARNING: insufficient information to run accesscontrol');		
-		else if (config.allow !==  null) {
-			debug ('allow list: ' + util.inspect(config.allow, 2, true));
-			if (scanIP(config.allow, sourceIP)) {
-				allow = true;
-			}			
-		}
-		else if (config.deny !==  null) {
-			debug ('deny list: ' + util.inspect(config.deny, 2, true));
-			if (scanIP(config.deny, sourceIP)) {
-				debug ('deny incoming message');
-				deny = true;
-			}			
-		}
-	}
+	const allowDenyList = Object.keys(config).filter( key => config[key] && ( key === 'allow' || key === 'deny' ) );
+	const LOG_TAG_COMP = 'accesscontrol';
 
 	/**
 	* check if the parameter is valid IPv4 address
@@ -45,6 +26,41 @@ module.exports.init = function (config /*, logger, stats */) {
 	    });
 	  }
 	  return false;
+	}
+
+
+	/**
+	* If no rules match then check use noRuleMatchAction value.
+	*/ 
+	function applyNoRuleMatch(res, req, next) {
+		if ( config && config.noRuleMatchAction === "deny") {
+			return sendError(res, req, null, next);	
+		}
+		next();
+	}
+
+	/** 
+	* Check if the sourceIP is present in allow or deny in config defined order.
+	* If matched in allow then accept the request and if matched deny then reject the request.
+	*/
+	function checkAccessForIP(sourceIP, res, req, next){
+		let isRuleMatched = allowDenyList.some( action => {
+				debug ('Checking in '+ action +' list: ' + util.inspect(config[action], 2, true));
+				if ( scanIP(config[action], sourceIP) ) {
+					if ( action === 'allow' ) {
+						next();
+					}
+					if ( action === 'deny' ) {
+						sendError(res, req,  null, next);	
+					}
+					return true;
+				}			
+		});
+		
+		if ( !isRuleMatched ) {
+			debug ('no rule matched');
+			applyNoRuleMatch(res, req, next);
+		}
 	}
 
 	/** 
@@ -97,41 +113,48 @@ module.exports.init = function (config /*, logger, stats */) {
 	/** 
 	* send error message to the user
 	*/
-	function sendError(res) {
+	function sendError(res,req,err=null,next) {
 		var errorInfo = {
-			"code": "403",
+			"code": 403,
 			"message": "Forbidden"
 		};
-		res.writeHead(403, { 'Content-Type': 'application/json' });
-		res.write(JSON.stringify(errorInfo));
-		res.end();
+		res.statusCode = errorInfo.code;
+		debug('access control failure')
+		const errout = Error('access control failure',err);
+		logger.eventLog({level:'error', req: req, res: res, err:errout, component:LOG_TAG_COMP }, 'sourceIP not allowed');
+		res.setHeader('content-type', 'application/json');
+		res.end(JSON.stringify(errorInfo));
+		try {
+			stats.incrementStatusCount(res.statusCode);
+		} catch (e) {
+			logger.eventLog({level:'warn', req: req, res: res, err:null, component:LOG_TAG_COMP }, "accesscontrol stats object is not supplied by runtime");
+		}
+		next(errorInfo.code,errorInfo.message);
 	}
 
 	return {
 
 		onrequest: function(req, res, next) {
 			debug('plugin onrequest');
-			var host = req.headers.host;
-			debug ("source ip " + host);
-			var sourceIP = host.split(":");
+			if((config === null) || (config.allow === null && config.deny === null)){
+				return applyNoRuleMatch(res, req, next);
+			}
+			
+			var sourceIP = req.headers.host.split(":");
+			debug ("source ip " + sourceIP);
 
 			if (checkIsIPV4(sourceIP[0])) {
-				checkAccessControlInfo(sourceIP[0]);
-				if (allow === false || deny === true)
-					sendError(res);
+				checkAccessForIP(sourceIP[0], res, req, next);
 			} else {
 				dns.lookup(sourceIP[0], (err, address, family) => {
 				  debug('address: %j family: IPv%s', address, family);
 				  if (err) {
 				  	debug(err);
-				  	sendError(res);
+				  	sendError(res, req, err, next);
 				  }
-				  checkAccessControlInfo(address);
-				  if (allow === false || deny === true)
-				  	sendError(res);				  
+				  checkAccessForIP(address, res, req, next);		  
 				});
 			}
-			next();
 		}		
 	};
 }
