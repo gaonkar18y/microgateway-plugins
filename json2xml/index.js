@@ -29,6 +29,8 @@ var js2xmlparser = require("js2xmlparser");
 var parseString = require("xml2js").parseString;
 //var util = require("util");
 
+const helperFunctions = require('../lib/helperFunctions');
+
 module.exports.init = function (/*config, logger, stats*/) {
 
 	//initialize the variables to false
@@ -115,6 +117,7 @@ module.exports.init = function (/*config, logger, stats*/) {
 		//
 		ondata_request: function(req, res, data, next) {
 			debug('plugin ondata_request');
+			data = helperFunctions.toBuffer(data);
 			if (data && data.length > 0 && req.jsonXmlFlags.disable === false) accumulateRequest(req, data);
 			next(null, null);
 		},
@@ -122,6 +125,7 @@ module.exports.init = function (/*config, logger, stats*/) {
 		//
 		ondata_response: function(req, res, data, next) {
 			debug('plugin ondata_response');
+			data = helperFunctions.toBuffer(data);
 			if (data && data.length > 0 && req.jsonXmlFlags.disable === false) accumulateResponse(res, data);
 			next(null, null);
 		},
